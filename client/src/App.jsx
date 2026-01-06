@@ -7,6 +7,8 @@ import { usePollState } from './hooks/usePollState.js';
 import { usePollTimer } from './hooks/usePollTimer.js';
 import ChatPanel from './components/ChatPanel.jsx';
 
+const API_BASE = (import.meta.env.VITE_SOCKET_URL || '').replace(/\/$/, '');
+
 function randomId() {
   return crypto.randomUUID();
 }
@@ -634,7 +636,8 @@ export default function App() {
 
   useEffect(() => {
     if (!storedName) return;
-    fetch('/api/polls/history')
+    const apiBase = API_BASE || '';
+    fetch(`${apiBase}/api/polls/history`)
       .then(res => res.json())
       .then(data => setHistory(data.items || []))
       .catch(() => setHistory([]));
