@@ -3,6 +3,9 @@ import { submitVote, countVotesForPoll } from '../services/voteService.js';
 import { getSession, listActiveSessions, setKicked, upsertSession, setOnline, getActiveTeacher } from '../services/sessionService.js';
 import { remainingSeconds } from '../utils/time.js';
 
+const TEACHER_GRACE_SECONDS = 60;
+const TEACHER_IDLE_MINUTES = 15;
+
 function validatePollPayload(payload) {
   const { question, options, durationSeconds } = payload || {};
   if (!question || typeof question !== 'string' || question.trim().length === 0) {
@@ -49,12 +52,11 @@ export function registerSocketHandlers(io, timerManager, isDbReady = () => true)
         const { sessionId, name, role } = data || {};
 
         if (role === 'teacher') {
-          const activeTeacher = await getActiveTeacher();
+          const activeTeacher = await getActiveTeacher({ graceSeconds: TEACHER_GRACE_SECONDS, idleMinutes: TEACHER_IDLE_MINUTES });
           if (activeTeacher && activeTeacher.sessionId !== sessionId) {
             const lastSeen = activeTeacher.lastSeen || activeTeacher.updatedAt || new Date();
             const ageSeconds = Math.max(0, (Date.now() - new Date(lastSeen).getTime()) / 1000);
-            const graceSeconds = 60;
-            const waitSeconds = Math.max(0, Math.ceil(graceSeconds - ageSeconds));
+            const waitSeconds = Math.max(0, Math.ceil(TEACHER_GRACE_SECONDS - ageSeconds));
             safeAck(cb, {
               ok: false,
               code: 'TEACHER_EXISTS',

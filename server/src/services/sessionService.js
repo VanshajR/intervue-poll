@@ -19,20 +19,27 @@ export async function getSession(sessionId) {
   return Session.findOne({ sessionId });
 }
 
-export async function getActiveTeacher(graceSeconds = 60) {
+export async function getActiveTeacher({ graceSeconds = 60, idleMinutes = 15 } = {}) {
   const cutoff = new Date(Date.now() - graceSeconds * 1000);
-  return Session.findOne({
+  const idleCutoff = new Date(Date.now() - idleMinutes * 60 * 1000);
+
+  const teacher = await Session.findOne({
     role: 'teacher',
     isKicked: { $ne: true },
-    $or: [
-      { isOnline: true },
-      { isOnline: { $exists: false } }
-    ],
-    $or: [
-      { lastSeen: { $gte: cutoff } },
-      { lastSeen: { $exists: false } }
+    $and: [
+      { $or: [{ isOnline: true }, { isOnline: { $exists: false } }] },
+      { $or: [{ lastSeen: { $gte: cutoff } }, { lastSeen: { $exists: false } }] }
     ]
   });
+
+  if (!teacher) return null;
+
+  if (teacher.lastSeen && teacher.lastSeen < idleCutoff) {
+    await setKicked(teacher.sessionId, true);
+    return null;
+  }
+
+  return teacher;
 }
 
 export async function setKicked(sessionId, value = true) {
