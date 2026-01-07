@@ -356,7 +356,7 @@ function PollsScreen({
     }
   }, [remainingSeconds, pollDuration, pollEnded, allStudentsAnswered, teacherView, poll, milestones, pushToast]);
 
-  if (kicked) {
+  if (kicked && !initPending) {
     return (
       <div className="stage kicked">
         <div className="badge">Intervue Poll</div>
@@ -612,6 +612,7 @@ export default function App() {
     setInitError('');
     setInitErrorCode('');
     setTeacherWaitSeconds(null);
+    setKicked(false);
 
     socket.emit('session:init', { sessionId, name: storedName, role }, ack => {
       if (ack?.ok) {
