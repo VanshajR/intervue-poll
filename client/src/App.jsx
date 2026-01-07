@@ -31,7 +31,7 @@ function ToastStack({ items, onDismiss }) {
 
 function RoleSelect({ selection, onSelect, onContinue, teacherPassword, onTeacherPassword, teacherError }) {
   return (
-    <div className="stage stage-tight">
+    <div className="stage stage-tight fade-card swap-screen">
       <div className="badge">Intervue Poll</div>
       <div className="stage-hero">
         <span style={{ fontWeight: 500 }}>Welcome to the </span>
@@ -76,7 +76,7 @@ function RoleSelect({ selection, onSelect, onContinue, teacherPassword, onTeache
 
 function NameStep({ value, onChange, onSubmit }) {
   return (
-    <div className="stage stage-tight">
+    <div className="stage stage-tight fade-card swap-screen">
       <div className="badge blue">Intervue Poll</div>
       <div className="stage-hero">
         <span style={{ fontWeight: 500 }}>Let’s </span>
@@ -176,7 +176,7 @@ function HistoryScreen({ history, role }) {
   const items = history || [];
 
   return (
-    <div className="page history-page">
+    <div className="page history-page fade-card swap-screen">
       <div className="history-sticky">
         <div className="history-header-top">
           <div>
@@ -231,7 +231,7 @@ function LockoutScreen({ teacherWaitSeconds, resetToStudent, retryTeacher }) {
     : 'Another teacher session is active. You can join as a student or retry later.';
 
   return (
-    <div className="stage kicked">
+    <div className="stage kicked fade-card swap-screen">
       <div className="badge">Intervue Poll</div>
       <div className="stage-sub">{copy}</div>
       {countdown && (
@@ -358,7 +358,7 @@ function PollsScreen({
 
   if (kicked && !initPending) {
     return (
-      <div className="stage kicked">
+      <div className="stage kicked fade-card swap-screen">
         <div className="badge">Intervue Poll</div>
         <div className="stage-hero">You’ve been Kicked out !</div>
         <div className="stage-sub">Looks like the teacher had removed you from the poll system. Please try again sometime.</div>
@@ -368,7 +368,7 @@ function PollsScreen({
 
   if (initPending && !poll) {
     return (
-      <div className="stage">
+      <div className="stage fade-card swap-screen">
         <div className="badge blue">Intervue Poll</div>
         <div className="spinner" aria-label="Joining" />
         <div className="stage-hero">Joining your session...</div>
@@ -430,7 +430,7 @@ function PollsScreen({
   const teacherLive = teacherView && poll;
 
   return (
-    <div className={`page ${teacherLive ? 'teacher-live' : 'poll-view'} swap-screen`}>
+    <div className={`page ${teacherLive ? 'teacher-live' : 'poll-view'} fade-card swap-screen`}>
 
       <div className="main-stack">
         {poll && !pollEnded && (

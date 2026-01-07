@@ -321,10 +321,10 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 .create-form-shell { width: min(900px, 100%); align-self: stretch; }
 .create-page .card { box-shadow: none; border: 1px solid transparent; background: #fff; }
 .create-page .cta-row { position: fixed; right: 28px; bottom: 28px; width: auto; margin: 0; padding: 0; gap: 0; }
-.fade-card { animation: fadeIn 200ms ease; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-.swap-screen { animation: swapIn 200ms ease; }
-@keyframes swapIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.fade-card { animation: fadeIn 220ms ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); filter: blur(1px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
+.swap-screen { animation: swapIn 240ms ease; }
+@keyframes swapIn { from { opacity: 0; transform: translateY(12px) scale(0.995); filter: blur(1px); } to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
 
 input[type='radio'] { accent-color: #8f64e1; }
 
