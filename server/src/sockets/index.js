@@ -2,9 +2,32 @@ import { createPoll, getPollById, getStateForSession, getActivePoll } from '../s
 import { submitVote, countVotesForPoll } from '../services/voteService.js';
 import { getSession, listActiveSessions, setKicked, upsertSession, setOnline, getActiveTeacher } from '../services/sessionService.js';
 import { remainingSeconds } from '../utils/time.js';
+import { appendMessage, getRecentMessages, clearAllMessages } from '../services/chatService.js';
 
 const TEACHER_GRACE_SECONDS = 60;
 const TEACHER_IDLE_MINUTES = 15;
+const CHAT_IDLE_MINUTES = 5;
+const CHAT_CLEANUP_INTERVAL_MS = 60000;
+
+let chatCleanupTimer = null;
+let chatIdleSince = null;
+
+function startChatCleanup(isDbReady) {
+  if (chatCleanupTimer) return;
+  chatCleanupTimer = setInterval(async () => {
+    if (!isDbReady()) return;
+    const active = await listActiveSessions(600);
+    if (active.length === 0) {
+      if (!chatIdleSince) chatIdleSince = Date.now();
+      if (Date.now() - chatIdleSince >= CHAT_IDLE_MINUTES * 60 * 1000) {
+        await clearAllMessages();
+        chatIdleSince = null;
+      }
+    } else {
+      chatIdleSince = null;
+    }
+  }, CHAT_CLEANUP_INTERVAL_MS);
+}
 
 function validatePollPayload(payload) {
   const { question, options, durationSeconds } = payload || {};
@@ -39,6 +62,8 @@ async function emitParticipants(io) {
 }
 
 export function registerSocketHandlers(io, timerManager, isDbReady = () => true) {
+  startChatCleanup(isDbReady);
+
   io.on('connection', socket => {
     const heartbeat = setInterval(() => {
       if (socket.data.sessionId) {
@@ -74,9 +99,11 @@ export function registerSocketHandlers(io, timerManager, isDbReady = () => true)
           return;
         }
         socket.data.sessionId = sessionId;
+        const history = await getRecentMessages();
         const state = await getStateForSession(sessionId);
         safeAck(cb, { ok: true, state });
         socket.emit('poll:state', state);
+        socket.emit('chat:history', { messages: history });
         emitParticipants(io);
       } catch (err) {
         safeAck(cb, { ok: false, message: err.message });
@@ -177,7 +204,10 @@ export function registerSocketHandlers(io, timerManager, isDbReady = () => true)
         const session = await getSession(sessionId);
         if (!session || session.isKicked) throw new Error('Not allowed');
         const message = { sender: session.name, sessionId, text };
-        io.emit('chat:message', message);
+        if (isDbReady()) {
+          await appendMessage(message);
+        }
+        io.emit('chat:message', { ...message, createdAt: new Date().toISOString() });
         safeAck(cb, { ok: true });
       } catch (err) {
         safeAck(cb, { ok: false, message: err.message });

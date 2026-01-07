@@ -662,11 +662,16 @@ export default function App() {
     };
     const onChat = msg =>
       setChatMessages(prev => [...prev, { ...msg, self: msg.sessionId === sessionId }]);
+    const onChatHistory = payload => {
+      const history = payload?.messages || [];
+      setChatMessages(history.map(msg => ({ ...msg, self: msg.sessionId === sessionId })));
+    };
     const onReconnect = () => requestState();
 
     socket.on('sessions:update', onSessions);
     socket.on('session:kicked', onKicked);
     socket.on('chat:message', onChat);
+    socket.on('chat:history', onChatHistory);
     socket.on('connect', onReconnect);
     socket.emit('sessions:request');
 
@@ -674,6 +679,7 @@ export default function App() {
       socket.off('sessions:update', onSessions);
       socket.off('session:kicked', onKicked);
       socket.off('chat:message', onChat);
+      socket.off('chat:history', onChatHistory);
       socket.off('connect', onReconnect);
     };
   }, [socket, sessionId, requestState]);
