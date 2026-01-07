@@ -25,9 +25,10 @@
 - Server is timer source of truth (ticks in [server/src/services/timerService.js](server/src/services/timerService.js)).
 - DB outage handling: retry/backoff and `dbReady` guard ([server/src/server.js](server/src/server.js)); 503 API fallback ([server/src/app.js](server/src/app.js)); socket acks return "Database unavailable" ([server/src/sockets/index.js](server/src/sockets/index.js)).
 - Session de-dup: per-tab sessionId + `upsertSession` ([server/src/services/sessionService.js](server/src/services/sessionService.js)) avoid duplicate participants across reconnects/restarts.
+- Teacher lockout self-heals: stale teacher sessions (>15 minutes idle) are auto-kicked on new init ([server/src/services/sessionService.js](server/src/services/sessionService.js)).
 
 ### 💬 Chat & Participants
-- Chat via sockets (not persisted) in [server/src/sockets/index.js](server/src/sockets/index.js); UI in [client/src/components/ChatPanel.jsx](client/src/components/ChatPanel.jsx) with outside-click close and fullscreen toggle; FAB hides in fullscreen and returns on close.
+- Chat persisted in Mongo (last 50 messages) via [server/src/services/chatService.js](server/src/services/chatService.js); delivered on join through `chat:history`; broadcast on `chat:message`; auto-clears after 5 minutes of zero participants.
 - Participant roster live via `sessions:update`; teacher can kick (blocked on reconnect).
 
 ## 🏗️ Architecture
@@ -40,23 +41,24 @@
 ### Backend (Express + Socket.io + MongoDB)
 - Entry/boot: [server/src/server.js](server/src/server.js) (DB retry/backoff, socket setup), [server/src/app.js](server/src/app.js) (API, CORS/helmet, 503 guard).
 - Sockets: [server/src/sockets/index.js](server/src/sockets/index.js).
-- Services: [server/src/services/pollService.js](server/src/services/pollService.js), [server/src/services/voteService.js](server/src/services/voteService.js), [server/src/services/sessionService.js](server/src/services/sessionService.js), [server/src/services/timerService.js](server/src/services/timerService.js).
+- Services: [server/src/services/pollService.js](server/src/services/pollService.js), [server/src/services/voteService.js](server/src/services/voteService.js), [server/src/services/sessionService.js](server/src/services/sessionService.js), [server/src/services/timerService.js](server/src/services/timerService.js), [server/src/services/chatService.js](server/src/services/chatService.js).
 - HTTP: [server/src/routes/pollRoutes.js](server/src/routes/pollRoutes.js), [server/src/controllers/pollController.js](server/src/controllers/pollController.js).
-- Models: [server/src/models/Poll.js](server/src/models/Poll.js), [server/src/models/Vote.js](server/src/models/Vote.js), [server/src/models/Session.js](server/src/models/Session.js).
+- Models: [server/src/models/Poll.js](server/src/models/Poll.js), [server/src/models/Vote.js](server/src/models/Vote.js), [server/src/models/Session.js](server/src/models/Session.js), [server/src/models/ChatMessage.js](server/src/models/ChatMessage.js).
 
 ## 📦 Data Model
 - Poll: question, options[{ text, isCorrect, votes }], durationSeconds (5–60), status, startTime, expiresAt, completedAt.
 - Vote: pollId, optionId, sessionId, voterName; unique (pollId, sessionId) enforces one vote per student per poll.
 - Session: sessionId, name, role, isKicked, isOnline, lastSeen.
+- ChatMessage: sender, sessionId, text, createdAt (retained last 50; older trimmed; cleared after 5 minutes idle).
 
 ## 🔄 Key Flows
-- Session init: client emits `session:init`; server returns current poll state (or kicked/block), broadcasts participants.
+- Session init: client emits `session:init`; server returns current poll state (or kicked/block), sends chat history, broadcasts participants.
 - Create poll: validates payload/gating, creates poll, starts server timer, emits `poll:created` with remaining seconds.
 - Vote: validates session, poll active, option exists, time remaining; dedup via unique index; emits `poll:update` after increment.
 - Timer: server ticks `poll:timer` every second; on expiry, marks poll completed and emits `poll:ended`.
 - Reconnect/reload: client calls `request:state` to get authoritative poll/vote/timer state.
 - Kick: teacher emits `teacher:kick`; target marked kicked and notified; roster updates.
-- Chat: broadcast only (not stored).
+- Chat: persisted; `chat:history` on join delivers last 50; `chat:message` appends/broadcasts; cleared after 5 minutes with no participants.
 
 ## 🚀 Setup
 
@@ -84,6 +86,15 @@
 - ✔️ **History:** Completed polls from MongoDB displayed with options and percentages
 - ✔️ **Chat:** FAB toggle, outside-click close, fullscreen mode; participant kick blocks reconnect
 - ✔️ **Resilience:** Mongo outage returns 503/error acks; server stays up; auto-reconnects when DB restored
+
+## 🌟 Extras Delivered
+- Persistent chat with history (Mongo-backed, last 50 messages), history on join, auto-clear after 5 minutes idle
+- Teacher auto-kick after 15 minutes idle to self-heal lockout edge cases
+- Participant kick controls for teachers; live roster updates
+- Netlify SPA routing safeguards (redirects) to prevent refresh 404s on deep links
+- Toast warnings to students at half-time and quarter-time remaining
+- Poll creator supports option removal with validation enforcing at least two options
+- Chat panel fullscreen toggle with outside-click close; FAB hides in fullscreen and returns on exit
 
 ## 🚀 Deployment
 
