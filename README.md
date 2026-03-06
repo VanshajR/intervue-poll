@@ -108,3 +108,7 @@
 - Set `VITE_SOCKET_URL` to backend origin
 - Deploy static files
 
+## 📃Note
+This was made as a first assignment for the company interview, UI design belongs to them, and I didn't get to progress beyond this first assignment round, and through the traffic analysis for the deployed site I am able to tell that nobody ever visited the deployment except me, so if you find yourself doing the same thing for this company, it's probably futile unless you know someone there or are lucky enough for them to bother having a look.
+
+MIT License, do with the code as you wish, except if you copy the design, that is not mine.
